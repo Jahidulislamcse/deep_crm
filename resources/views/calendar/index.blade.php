@@ -27,6 +27,11 @@
         <div class="flex flex-wrap items-center gap-2.5">
             <!-- View Mode Switcher -->
             <div class="bg-white border border-slate-200 rounded-xl p-1 flex items-center shadow-sm">
+                <a href="{{ request()->fullUrlWithQuery(['view' => 'list']) }}"
+                   class="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all {{ $viewMode === 'list' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900' }}">
+                    <i class="fa fa-list"></i>
+                    <span>Table View</span>
+                </a>
                 <a href="{{ request()->fullUrlWithQuery(['view' => 'calendar']) }}"
                    class="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all {{ $viewMode === 'calendar' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900' }}">
                     <i class="fa fa-calendar-grid-5"></i>
@@ -36,11 +41,6 @@
                    class="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all {{ $viewMode === 'pipeline' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900' }}">
                     <i class="fa fa-arrows-split-up-and-left"></i>
                     <span>6-Stage Pipeline</span>
-                </a>
-                <a href="{{ request()->fullUrlWithQuery(['view' => 'list']) }}"
-                   class="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all {{ $viewMode === 'list' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900' }}">
-                    <i class="fa fa-list"></i>
-                    <span>List</span>
                 </a>
             </div>
 

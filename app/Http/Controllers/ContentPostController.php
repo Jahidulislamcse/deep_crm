@@ -53,7 +53,7 @@ class ContentPostController extends Controller
         $month = $request->get('month', now()->format('m'));
         $year  = $request->get('year', now()->format('Y'));
         
-        $viewMode = $request->get('view', 'calendar'); // 'calendar', 'pipeline', 'list'
+        $viewMode = $request->get('view', 'list'); // 'list', 'calendar', 'pipeline'
 
         if ($viewMode === 'calendar') {
             $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();

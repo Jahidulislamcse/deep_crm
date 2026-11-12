@@ -4,7 +4,7 @@
 @section('header_title', 'CRM Lead Pipeline & Deals')
 
 @section('content')
-<div class="space-y-6" x-data="{ viewMode: 'kanban', showMeetingModal: false, meetingLeadId: '', meetingLeadName: '', meetingAgenda: '' }">
+<div class="space-y-6" x-data="{ viewMode: 'table', showMeetingModal: false, meetingLeadId: '', meetingLeadName: '', meetingAgenda: '' }">
 
     <!-- Top Action Bar & Metrics -->
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -16,17 +16,17 @@
         <div class="flex flex-wrap items-center gap-3">
             <!-- View Mode Switcher -->
             <div class="bg-slate-200/80 p-1 rounded-xl flex items-center gap-1 border border-slate-300/60 shadow-inner">
-                <button @click="viewMode = 'kanban'"
-                        :class="viewMode === 'kanban' ? 'bg-white text-slate-900 shadow-sm font-bold' : 'text-slate-600 hover:text-slate-900 font-semibold'"
-                        class="px-3 py-1.5 rounded-lg text-xs flex items-center gap-2 transition-all">
-                    <i class="fa fa-columns text-amber-500"></i>
-                    <span>Kanban Board</span>
-                </button>
                 <button @click="viewMode = 'table'"
                         :class="viewMode === 'table' ? 'bg-white text-slate-900 shadow-sm font-bold' : 'text-slate-600 hover:text-slate-900 font-semibold'"
                         class="px-3 py-1.5 rounded-lg text-xs flex items-center gap-2 transition-all">
-                    <i class="fa fa-list text-slate-500"></i>
+                    <i class="fa fa-list text-amber-500"></i>
                     <span>Table View</span>
+                </button>
+                <button @click="viewMode = 'kanban'"
+                        :class="viewMode === 'kanban' ? 'bg-white text-slate-900 shadow-sm font-bold' : 'text-slate-600 hover:text-slate-900 font-semibold'"
+                        class="px-3 py-1.5 rounded-lg text-xs flex items-center gap-2 transition-all">
+                    <i class="fa fa-columns text-slate-500"></i>
+                    <span>Kanban Board</span>
                 </button>
             </div>
 
@@ -145,7 +145,7 @@
     </div>
 
     <!-- KANBAN BOARD VIEW -->
-    <div x-show="viewMode === 'kanban'" class="overflow-x-auto pb-6">
+    <div x-show="viewMode === 'kanban'" class="overflow-x-auto pb-6" x-cloak>
         <div class="flex items-start gap-4 min-w-[1200px]">
             @foreach($stages as $stage)
             @php
@@ -276,7 +276,7 @@
     </div>
 
     <!-- TABLE LIST VIEW -->
-    <div x-show="viewMode === 'table'" class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden" x-cloak>
+    <div x-show="viewMode === 'table'" class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>

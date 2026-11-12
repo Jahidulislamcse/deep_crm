@@ -346,21 +346,117 @@
         <!-- Main Content Area -->
         <div class="flex-1 flex flex-col overflow-hidden">
             <!-- Top Navbar -->
-            <header class="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-10">
-                <div class="flex items-center gap-4">
+            <header class="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between gap-4 sticky top-0 z-20">
+                <div class="flex items-center gap-3 flex-shrink-0">
                     <button @click="sidebarOpen = !sidebarOpen" class="md:hidden text-slate-500 hover:text-slate-800">
                         <i class="fa fa-bars text-xl"></i>
                     </button>
-                    <h1 class="text-base font-bold text-slate-900 tracking-tight">
+                    <h1 class="text-sm sm:text-base font-bold text-slate-900 tracking-tight truncate max-w-[160px] sm:max-w-xs">
                         @yield('header_title', 'Super Admin Overview')
                     </h1>
                 </div>
 
-                <div class="flex items-center gap-3">
+                @auth
+                <!-- Global Instant Search Bar (Clients, Tasks, Projects, Campaigns) -->
+                <div class="flex-1 max-w-md relative"
+                     x-data="{
+                         query: '',
+                         results: [],
+                         loading: false,
+                         open: false,
+                         timer: null,
+                         doSearch() {
+                             clearTimeout(this.timer);
+                             const q = this.query.trim();
+                             if (q.length < 2) {
+                                 this.results = [];
+                                 this.open = false;
+                                 return;
+                             }
+                             this.loading = true;
+                             this.open = true;
+                             this.timer = setTimeout(() => {
+                                 fetch('{{ route('global-search') }}?q=' + encodeURIComponent(q), {
+                                     headers: { 'Accept': 'application/json' }
+                                 })
+                                 .then(r => r.json())
+                                 .then(data => {
+                                     this.results = data.results || [];
+                                     this.loading = false;
+                                 })
+                                 .catch(() => {
+                                     this.loading = false;
+                                 });
+                             }, 220);
+                         }
+                     }"
+                     @keydown.window.ctrl.k.prevent="$refs.globalSearchInput.focus(); open = query.trim().length >= 2;"
+                     @keydown.window.meta.k.prevent="$refs.globalSearchInput.focus(); open = query.trim().length >= 2;"
+                     @keydown.escape.window="open = false"
+                     @click.outside="open = false">
+
+                    <div class="relative">
+                        <i class="fa fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text"
+                               x-ref="globalSearchInput"
+                               x-model="query"
+                               @input="doSearch()"
+                               @focus="if (query.trim().length >= 2) open = true"
+                               placeholder="Search client, task, campaign, invoice... (Ctrl+K)"
+                               autocomplete="off"
+                               class="w-full pl-9 pr-14 py-2 bg-slate-100/80 hover:bg-slate-100 focus:bg-white border border-slate-200/80 focus:border-amber-500 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition-all">
+                        <div class="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                            <span x-show="loading" x-cloak class="text-amber-500 text-xs">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </span>
+                            <button type="button" x-show="query.length > 0 && !loading" x-cloak @click="query = ''; results = []; open = false;"
+                                    class="text-slate-400 hover:text-slate-600 p-0.5 text-xs">
+                                <i class="fa fa-times-circle"></i>
+                            </button>
+                            <kbd x-show="query.length === 0" class="hidden sm:inline-block px-1.5 py-0.5 text-[9px] font-bold text-slate-400 bg-white border border-slate-200 rounded shadow-2xs">
+                                Ctrl+K
+                            </kbd>
+                        </div>
+                    </div>
+
+                    <!-- Instant Dropdown Results -->
+                    <div x-show="open" x-cloak
+                         class="absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200/90 overflow-hidden z-40">
+                        <div class="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                            <span>Instant Global Search</span>
+                            <span x-text="loading ? 'Searching...' : results.length + ' match(es)'"></span>
+                        </div>
+
+                        <div class="max-h-96 overflow-y-auto divide-y divide-slate-100">
+                            <template x-for="(item, idx) in results" :key="idx">
+                                <a :href="item.url" class="px-4 py-2.5 flex items-center gap-3 hover:bg-amber-50/50 transition-all group">
+                                    <div class="w-8 h-8 rounded-xl flex items-center justify-center text-xs flex-shrink-0" :class="item.iconBg">
+                                        <i class="fa" :class="item.icon"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <p class="text-xs font-bold text-slate-900 truncate group-hover:text-amber-700" x-text="item.title"></p>
+                                            <span class="px-2 py-0.5 rounded text-[9px] font-extrabold border flex-shrink-0" :class="item.badgeBg" x-text="item.category"></span>
+                                        </div>
+                                        <p class="text-[11px] font-medium text-slate-500 truncate" x-text="item.subtitle"></p>
+                                    </div>
+                                </a>
+                            </template>
+
+                            <div x-show="!loading && results.length === 0" class="py-8 text-center text-slate-400">
+                                <i class="fa fa-magnifying-glass text-xl block mb-1.5 opacity-50"></i>
+                                <p class="text-xs font-semibold">No matching clients, tasks, or projects found.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endauth
+
+                <div class="flex items-center gap-3 flex-shrink-0">
                     <!-- Environment Badge -->
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span class="hidden lg:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-ping"></span>
-                        MariaDB Live Persistence
+                        MariaDB Live
                     </span>
 
                     @auth

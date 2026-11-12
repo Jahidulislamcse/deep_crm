@@ -3,9 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\ContentPost;
-use App\Models\Client;
-use App\Models\User;
+use App\Models\{ContentPost, Client, User, Notification};
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 
@@ -114,13 +112,31 @@ class ContentPostController extends Controller
 
         $validated['created_by'] = Auth::id() ?? 1;
 
-        ContentPost::create($validated);
+        $post = ContentPost::create($validated);
+
+        // Instant alert if assigned to a creator at creation
+        if (!empty($post->assigned_to) && (int) $post->assigned_to !== (int) Auth::id()) {
+            $post->load('client');
+            $clientName = $post->client->name ?? 'Client';
+            $actorName = Auth::user()->name ?? 'SMM Lead';
+            $formatLabel = $post->format_info['label'] ?? 'Content';
+
+            Notification::create([
+                'user_id'       => $post->assigned_to,
+                'icon'          => 'fa-pen-to-square',
+                'bg_color'      => 'bg-purple-600',
+                'message'       => "New {$formatLabel} Assigned: {$actorName} assigned '{$post->title}' ({$clientName}) to you in stage '" . ($post->stage_info['label'] ?? 'Draft') . "'.",
+                'is_admin_only' => false,
+            ]);
+        }
 
         return redirect()->back()->with('success', 'Content item added to calendar successfully!');
     }
 
     public function update(Request $request, ContentPost $post)
     {
+        $oldStatus = $post->status;
+
         $validated = $request->validate([
             'title'             => 'required|string|max:255',
             'client_id'         => 'required|exists:clients,id',
@@ -140,11 +156,17 @@ class ContentPostController extends Controller
 
         $post->update($validated);
 
+        if ($oldStatus !== $post->status) {
+            $this->notifyStageTransition($post, $oldStatus, $post->status);
+        }
+
         return redirect()->back()->with('success', 'Content item updated successfully!');
     }
 
     public function updateStage(Request $request, ContentPost $post)
     {
+        $oldStatus = $post->status;
+
         $validated = $request->validate([
             'status'            => 'required|string|in:draft,internal_review,client_approval,revision,approved,published',
             'internal_feedback' => 'nullable|string',
@@ -152,6 +174,10 @@ class ContentPostController extends Controller
         ]);
 
         $post->update($validated);
+
+        if ($oldStatus !== $post->status) {
+            $this->notifyStageTransition($post, $oldStatus, $post->status);
+        }
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -161,7 +187,96 @@ class ContentPostController extends Controller
             ]);
         }
 
-        return redirect()->back()->with('success', 'Post moved to ' . ($post->stage_info['label'] ?? $post->status));
+        return redirect()->back()->with('success', 'Post moved to ' . ($post->stage_info['label'] ?? $post->status) . ' — team notified!');
+    }
+
+    /**
+     * Dispatch instant stage-transition notifications to the next responsible creators/reviewers
+     * in the 6-stage content approval workflow.
+     */
+    private function notifyStageTransition(ContentPost $post, string $oldStatus, string $newStatus): void
+    {
+        $post->load(['client', 'assignedTo', 'createdBy']);
+
+        $actorId    = Auth::id();
+        $actorName  = Auth::user()->name ?? 'Team Member';
+        $clientName = $post->client->name ?? 'Client';
+        $stageLabel = $post->stage_info['label'] ?? ucfirst(str_replace('_', ' ', $newStatus));
+        $formatLabel = $post->format_info['label'] ?? 'Content';
+
+        $adminIds = User::whereIn('role', ['owner', 'admin'])->where('active', true)->pluck('id')->all();
+        $clientSmmId   = $post->client->assigned_smm ?? null;
+        $clientSalesId = $post->client->assigned_sales ?? null;
+
+        $recipients = [];
+        $icon = 'fa-bell';
+        $bgColor = 'bg-indigo-600';
+        $actionHint = "Check the content board to take action.";
+
+        switch ($newStatus) {
+            case 'draft':
+                $recipients = [$post->assigned_to];
+                $icon = 'fa-pen';
+                $bgColor = 'bg-slate-700';
+                $actionHint = "Your turn to work on the initial draft/design!";
+                break;
+
+            case 'internal_review':
+                // Creator submitted for QA -> Notify SMM Lead & Admins
+                $recipients = array_merge([$clientSmmId, $post->created_by], $adminIds);
+                $icon = 'fa-magnifying-glass';
+                $bgColor = 'bg-indigo-600';
+                $actionHint = "Ready for Creative Lead / SMM internal QA review.";
+                break;
+
+            case 'client_approval':
+                // Passed Internal QA -> Notify Client SMM, Sales Account Rep & Creator
+                $recipients = [$clientSmmId, $clientSalesId, $post->created_by, $post->assigned_to];
+                $icon = 'fa-paper-plane';
+                $bgColor = 'bg-blue-600';
+                $actionHint = "Sent forward for client sign-off.";
+                break;
+
+            case 'revision':
+                // Revision Needed -> Urgent alert to the assigned creator & creator/SMM
+                $recipients = [$post->assigned_to, $post->created_by];
+                $icon = 'fa-rotate-right';
+                $bgColor = 'bg-amber-600';
+                $feedback = trim($post->client_feedback ?: ($post->internal_feedback ?? ''));
+                $actionHint = $feedback
+                    ? "Your turn to revise! Feedback: \"" . \Illuminate\Support\Str::limit($feedback, 90) . "\""
+                    : "Your turn to revise — please check review feedback on the board!";
+                break;
+
+            case 'approved':
+                // Approved -> Notify SMM (to schedule/publish) & Creator
+                $recipients = [$clientSmmId, $post->assigned_to, $post->created_by];
+                $icon = 'fa-circle-check';
+                $bgColor = 'bg-emerald-600';
+                $actionHint = "Approved and cleared for final scheduling & publishing!";
+                break;
+
+            case 'published':
+                // Published -> Celebrate with Creator, SMM & Sales
+                $recipients = [$post->assigned_to, $post->created_by, $clientSmmId];
+                $icon = 'fa-globe';
+                $bgColor = 'bg-teal-600';
+                $actionHint = "Now live on {$post->platform_info['label']}!";
+                break;
+        }
+
+        // Deduplicate & avoid notifying the actor who triggered the stage move
+        $targetUserIds = array_values(array_unique(array_filter($recipients, fn($id) => !empty($id) && (int)$id !== (int)$actorId)));
+
+        foreach ($targetUserIds as $userId) {
+            Notification::create([
+                'user_id'       => $userId,
+                'icon'          => $icon,
+                'bg_color'      => $bgColor,
+                'message'       => "[6-Stage Workflow -> {$stageLabel}] {$formatLabel} '{$post->title}' ({$clientName}) moved by {$actorName}. {$actionHint}",
+                'is_admin_only' => false,
+            ]);
+        }
     }
 
     public function destroy(ContentPost $post)

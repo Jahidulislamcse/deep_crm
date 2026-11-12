@@ -101,6 +101,15 @@
                           class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-brand-500">{{ old('agency_address', $settings['agency_address']) }}</textarea>
             </div>
 
+            <div class="pt-3 border-t border-slate-100">
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1 flex items-center gap-2">
+                    <i class="fa fa-file-signature text-brand-500"></i> Default Proposal & Quotation Terms Template
+                </label>
+                <p class="text-[11px] text-slate-500 mb-2">Automatically pre-fills standard terms & conditions whenever a sales rep creates or edits a client proposal.</p>
+                <textarea name="default_proposal_terms" rows="5"
+                          class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium leading-relaxed focus:outline-none focus:border-brand-500">{{ old('default_proposal_terms', $settings['default_proposal_terms'] ?? '') }}</textarea>
+            </div>
+
             <div class="pt-3 border-t border-slate-100 flex items-center justify-end">
                 <button type="submit" class="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2">
                     <i class="fa fa-save"></i> Save Agency Profile & Logo

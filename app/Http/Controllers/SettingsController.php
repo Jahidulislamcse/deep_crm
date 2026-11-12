@@ -23,6 +23,7 @@ class SettingsController extends Controller
             'agency_currency' => '৳',
             'tax_id' => 'BIN-992019481',
             'agency_logo' => null,
+            'default_proposal_terms' => "1. Pricing is valid for 15 days from the issue date stated above.\n2. Payment Terms: 50% advance upon confirmation, 50% upon milestone deliverables.\n3. Execution timeline commences upon receiving required client assets and branding guidelines.\n4. Revisions: Includes standard 2 rounds of review per deliverable.\n5. Monthly ad spend budget (if applicable) is billed directly to the client's ad account or settled prior to campaign launch.",
         ];
 
         try {
@@ -59,6 +60,7 @@ class SettingsController extends Controller
                 'agency_address' => 'required|string|max:500',
                 'agency_currency' => 'required|string|max:10',
                 'tax_id' => 'nullable|string|max:100',
+                'default_proposal_terms' => 'nullable|string|max:5000',
             ]);
 
             $currentSettings = self::getAgencySettings();
@@ -70,6 +72,7 @@ class SettingsController extends Controller
                 'agency_currency' => $validated['agency_currency'],
                 'tax_id' => $validated['tax_id'] ?? null,
                 'agency_logo' => $currentSettings['agency_logo'] ?? null,
+                'default_proposal_terms' => $validated['default_proposal_terms'] ?? ($currentSettings['default_proposal_terms'] ?? null),
             ];
 
             // File upload handling without requiring php_fileinfo extension

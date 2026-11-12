@@ -4,7 +4,7 @@
 @section('header_title', 'Prospect Lead Profile')
 
 @section('content')
-<div class="max-w-6xl mx-auto space-y-6" x-data="{ showConvertModal: false }">
+<div class="max-w-6xl mx-auto space-y-6" x-data="{ showConvertModal: false, showMeetingModal: false }">
 
     <!-- Top Action Bar -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -32,6 +32,14 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
+            <!-- Inline Schedule Meeting Button -->
+            @if(auth()->user()->canAccess('meetings'))
+            <button @click="showMeetingModal = true" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 flex items-center gap-2 transition-all">
+                <i class="fa fa-calendar-plus text-sm"></i>
+                <span>Schedule Meeting</span>
+            </button>
+            @endif
+
             <!-- Proposal & Quotation PDF Link -->
             <a href="{{ route('crm.quotation', $lead->id) }}" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs shadow-md shadow-amber-500/20 flex items-center gap-2 transition-all">
                 <i class="fa fa-file-invoice text-sm"></i>
@@ -296,6 +304,90 @@
             </form>
         </div>
     </div>
+
+    <!-- Schedule Meeting Modal (Inline Lead Profile) -->
+    @if(auth()->user()->canAccess('meetings'))
+    <div x-show="showMeetingModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4" x-cloak>
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto" @click.outside="showMeetingModal = false">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm">
+                        <i class="fa fa-calendar-plus"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-sm">Schedule Call / Meeting</h3>
+                        <p class="text-[11px] text-slate-500 font-semibold">Prospect: <span class="text-blue-600 font-bold">{{ $lead->name }}</span></p>
+                    </div>
+                </div>
+                <button type="button" @click="showMeetingModal = false" class="text-slate-400 hover:text-slate-600"><i class="fa fa-times text-lg"></i></button>
+            </div>
+
+            <form action="{{ route('meetings.store') }}" method="POST" class="space-y-4">
+                @csrf
+                <input type="hidden" name="lead_id" value="{{ $lead->id }}">
+                <input type="hidden" name="redirect_back" value="1">
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Meeting Agenda / Subject *</label>
+                    <input type="text" name="agenda" value="Discovery & Proposal Call — {{ $lead->name }}" required
+                           class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Date *</label>
+                        <input type="date" name="date" value="{{ now()->format('Y-m-d') }}" required
+                               class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Time *</label>
+                        <input type="time" name="time" value="11:00" required
+                               class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Duration *</label>
+                        <select name="duration" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-500">
+                            <option value="15">15 Mins</option>
+                            <option value="30" selected>30 Mins</option>
+                            <option value="45">45 Mins</option>
+                            <option value="60">60 Mins</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Meeting Link / Location</label>
+                    <input type="text" name="location" value="Google Meet / Video Call"
+                           class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Invite Team Attendees</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-32 overflow-y-auto p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                        @foreach($teamMembers as $member)
+                        <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer hover:text-blue-600">
+                            <input type="checkbox" name="attendees[]" value="{{ $member->id }}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                   {{ $member->id === auth()->id() ? 'checked' : '' }}>
+                            <span class="truncate">{{ $member->name }}</span>
+                        </label>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                    <button type="button" @click="showMeetingModal = false" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 flex items-center gap-1.5">
+                        <i class="fa fa-calendar-check"></i> Schedule Meeting
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    @endif
 
 </div>
 @endsection

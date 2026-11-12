@@ -14,6 +14,7 @@ class LeadController extends Controller
         $user = Auth::user();
         $stages = LeadStage::orderBy('order')->get();
         $salesReps = User::where('active', true)->whereIn('role', ['owner', 'admin', 'sales'])->get();
+        $teamMembers = User::where('active', true)->orderBy('name')->get();
 
         $query = Lead::with(['stage', 'assignedTo', 'createdBy', 'requirements']);
 
@@ -54,7 +55,7 @@ class LeadController extends Controller
             ]);
         }
 
-        return view('crm.index', compact('stages', 'kanbanLeads', 'allLeads', 'salesReps'));
+        return view('crm.index', compact('stages', 'kanbanLeads', 'allLeads', 'salesReps', 'teamMembers'));
     }
 
     public function create()
@@ -136,8 +137,9 @@ class LeadController extends Controller
         $stages = LeadStage::orderBy('order')->get();
         $salesReps = User::where('active', true)->whereIn('role', ['owner', 'sales'])->get();
         $services = Service::where('active', true)->get();
+        $teamMembers = User::where('active', true)->orderBy('name')->get();
 
-        return view('crm.show', compact('lead', 'stages', 'salesReps', 'services'));
+        return view('crm.show', compact('lead', 'stages', 'salesReps', 'services', 'teamMembers'));
     }
 
     public function edit(Lead $lead)

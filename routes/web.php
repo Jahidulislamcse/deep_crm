@@ -24,7 +24,8 @@ use App\Http\Controllers\{
     TargetController,
     WorklogController,
     WorkloadController,
-    AiAssistantController
+    AiAssistantController,
+    GlobalSearchController
 };
 
 // ── Guest / Auth Routes ──
@@ -39,6 +40,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 Route::middleware(['auth'])->group(function () {
     Route::get('/', fn() => redirect()->route('dashboard'));
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/global-search', [GlobalSearchController::class, 'search'])->name('global-search');
 
     // Notifications Center
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
@@ -118,6 +120,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/campaigns/{campaign}', [CampaignController::class, 'update'])->name('campaigns.update');
         Route::post('/campaigns/{campaign}/metrics', [CampaignController::class, 'updateMetrics'])->name('campaigns.metrics');
         Route::post('/campaigns/{campaign}/status', [CampaignController::class, 'updateStatus'])->name('campaigns.status');
+        Route::post('/campaigns/{campaign}/tasks', [CampaignController::class, 'bulkAssignTasks'])->name('campaigns.bulk-tasks');
         Route::delete('/campaigns/{campaign}', [CampaignController::class, 'destroy'])->name('campaigns.destroy');
     });
 

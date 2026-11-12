@@ -306,6 +306,13 @@
                         <!-- Actions -->
                         <td class="py-3.5 px-4 text-right">
                             <div class="flex items-center justify-end gap-1.5">
+                                <!-- Bulk Assign Multiple Tasks -->
+                                @if(auth()->user()->canAccess('tasks'))
+                                <button onclick="openBulkTasksModal({{ json_encode($camp) }})" class="p-1.5 text-emerald-600 hover:text-emerald-800 rounded-lg hover:bg-emerald-50 transition-colors" title="Bulk Assign Multiple Tasks">
+                                    <i class="fa fa-list-check text-xs"></i>
+                                </button>
+                                @endif
+
                                 <!-- Quick Metrics Log Button -->
                                 <button onclick="openMetricsModal({{ json_encode($camp) }})" class="p-1.5 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 transition-colors" title="Update Live Performance Metrics">
                                     <i class="fa fa-chart-simple text-xs"></i>
@@ -351,7 +358,7 @@
 <!-- MODAL: LAUNCH NEW CAMPAIGN                                -->
 <!-- ======================================================== -->
 <div id="createModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-3xl w-full p-6 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm">
@@ -456,10 +463,37 @@
                 <textarea name="notes" rows="2" placeholder="e.g. Bid strategy: Lowest cost per result. Pixel event: Lead form submit..." class="w-full text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
             </div>
 
+            <!-- BULK ASSIGN MULTIPLE TASKS AT LAUNCH -->
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <h4 class="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                            <i class="fa fa-list-check text-emerald-600"></i>
+                            <span>Bulk Launch Tasks (Assign Multiple Tasks at Once)</span>
+                        </h4>
+                        <p class="text-[10px] text-slate-500 font-medium">Create 1–15 campaign deliverables for designers, writers, video editors & buyers in one go.</p>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" onclick="loadLaunchPack('createTaskRows', 'create')"
+                                class="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[10px] font-bold flex items-center gap-1 transition-all">
+                            <i class="fa fa-wand-magic-sparkles"></i> Load Standard Pack (5)
+                        </button>
+                        <button type="button" onclick="addBulkTaskRow('createTaskRows', 'create')"
+                                class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold flex items-center gap-1 transition-all shadow-xs">
+                            <i class="fa fa-plus"></i> Add Task Row
+                        </button>
+                    </div>
+                </div>
+
+                <div id="createTaskRows" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    <!-- Dynamic task rows injected here -->
+                </div>
+            </div>
+
             <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
                 <button type="button" onclick="closeCreateModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all">Cancel</button>
                 <button type="submit" class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-black shadow-md shadow-blue-500/20 transition-all">
-                    Launch Campaign
+                    Launch Campaign & Assign Tasks
                 </button>
             </div>
         </form>
@@ -662,7 +696,58 @@
     </div>
 </div>
 
+<!-- ======================================================== -->
+<!-- MODAL: BULK ASSIGN TASKS TO EXISTING CAMPAIGN             -->
+<!-- ======================================================== -->
+<div id="bulkTasksModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-3xl w-full p-6 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm">
+                    <i class="fa fa-list-check"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-black text-slate-900">Bulk Assign Campaign Tasks</h3>
+                    <p id="bulkTasksCampTitle" class="text-xs font-semibold text-slate-500"></p>
+                </div>
+            </div>
+            <button onclick="closeBulkTasksModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+        </div>
+
+        <form id="bulkTasksForm" method="POST" action="" class="space-y-4">
+            @csrf
+
+            <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200/80">
+                <span class="text-xs font-bold text-slate-600">Add 1–15+ tasks simultaneously across your team</span>
+                <div class="flex items-center gap-1.5">
+                    <button type="button" onclick="loadLaunchPack('bulkTaskRows', 'bulk')"
+                            class="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[10px] font-bold flex items-center gap-1 transition-all">
+                        <i class="fa fa-wand-magic-sparkles"></i> Load Standard Pack (5)
+                    </button>
+                    <button type="button" onclick="addBulkTaskRow('bulkTaskRows', 'bulk')"
+                            class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold flex items-center gap-1 transition-all">
+                        <i class="fa fa-plus"></i> Add Task Row
+                    </button>
+                </div>
+            </div>
+
+            <div id="bulkTaskRows" class="space-y-2 max-h-80 overflow-y-auto pr-1"></div>
+
+            <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+                <button type="button" onclick="closeBulkTasksModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all">Cancel</button>
+                <button type="submit" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-500/20 transition-all">
+                    <i class="fa fa-check-double mr-1"></i> Assign All Tasks Now
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
+const campaignTeamMembers = @json($mediaBuyers->map(fn($u) => ['id' => $u->id, 'name' => $u->name, 'role' => ucfirst($u->role)])->values());
+const baseCampaignUrl = "{{ url('/campaigns') }}";
+let rowCounters = { create: 0, bulk: 0 };
+
 function openCreateModal() {
     document.getElementById('createModal').classList.remove('hidden');
 }
@@ -672,7 +757,7 @@ function closeCreateModal() {
 }
 
 function openEditModal(camp) {
-    document.getElementById('editForm').action = '/campaigns/' + camp.id;
+    document.getElementById('editForm').action = baseCampaignUrl + '/' + camp.id;
     document.getElementById('editName').value = camp.name || '';
     document.getElementById('editClientId').value = camp.client_id || '';
     document.getElementById('editAssignedTo').value = camp.assigned_to || '';
@@ -693,7 +778,7 @@ function closeEditModal() {
 }
 
 function openMetricsModal(camp) {
-    document.getElementById('metricsForm').action = '/campaigns/' + camp.id + '/metrics';
+    document.getElementById('metricsForm').action = baseCampaignUrl + '/' + camp.id + '/metrics';
     document.getElementById('metricsCampTitle').innerText = camp.name + ' (' + (camp.client ? camp.client.name : '') + ')';
     document.getElementById('mSpend').value = camp.spend || 0;
     document.getElementById('mLeads').value = camp.leads_count || 0;
@@ -706,6 +791,74 @@ function openMetricsModal(camp) {
 
 function closeMetricsModal() {
     document.getElementById('metricsModal').classList.add('hidden');
+}
+
+function openBulkTasksModal(camp) {
+    document.getElementById('bulkTasksForm').action = baseCampaignUrl + '/' + camp.id + '/tasks';
+    document.getElementById('bulkTasksCampTitle').innerText = camp.name + ' (' + (camp.client ? camp.client.name : '') + ')';
+    const container = document.getElementById('bulkTaskRows');
+    if (container.children.length === 0) {
+        addBulkTaskRow('bulkTaskRows', 'bulk');
+    }
+    document.getElementById('bulkTasksModal').classList.remove('hidden');
+}
+
+function closeBulkTasksModal() {
+    document.getElementById('bulkTasksModal').classList.add('hidden');
+}
+
+function addBulkTaskRow(containerId, key, preset = {}) {
+    const container = document.getElementById(containerId);
+    const idx = rowCounters[key]++;
+    const defaultDate = preset.deadline || "{{ now()->addDays(2)->format('Y-m-d') }}";
+
+    let optionsHtml = '<option value="">Auto / Campaign Lead</option>';
+    campaignTeamMembers.forEach(m => {
+        const selected = preset.roleHint && m.role.toLowerCase().includes(preset.roleHint) ? 'selected' : '';
+        optionsHtml += `<option value="${m.id}" ${selected}>${m.name} (${m.role})</option>`;
+    });
+
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-white p-2 rounded-xl border border-slate-200 shadow-2xs';
+    rowDiv.innerHTML = `
+        <div class="sm:col-span-4">
+            <input type="text" name="tasks[${idx}][title]" required value="${preset.title || ''}" placeholder="Task deliverable title..."
+                   class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-500">
+        </div>
+        <div class="sm:col-span-3">
+            <select name="tasks[${idx}][assigned_to]" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-500">
+                ${optionsHtml}
+            </select>
+        </div>
+        <div class="sm:col-span-2">
+            <select name="tasks[${idx}][priority]" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-500">
+                <option value="low" ${preset.priority === 'low' ? 'selected' : ''}>Low</option>
+                <option value="medium" ${!preset.priority || preset.priority === 'medium' ? 'selected' : ''}>Medium</option>
+                <option value="high" ${preset.priority === 'high' ? 'selected' : ''}>High</option>
+            </select>
+        </div>
+        <div class="sm:col-span-2">
+            <input type="date" name="tasks[${idx}][deadline]" value="${defaultDate}"
+                   class="w-full text-[11px] font-semibold bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-500">
+        </div>
+        <div class="sm:col-span-1 text-right">
+            <button type="button" onclick="this.closest('.grid').remove()" class="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors" title="Remove row">
+                <i class="fa fa-trash-can text-xs"></i>
+            </button>
+        </div>
+    `;
+    container.appendChild(rowDiv);
+}
+
+function loadLaunchPack(containerId, key) {
+    const standardTasks = [
+        { title: 'Ad Copywriting & Primary Headlines', priority: 'high', roleHint: 'writer' },
+        { title: 'Static Ad Creative Banners (3 Variations)', priority: 'high', roleHint: 'designer' },
+        { title: '15s Short Reel / Ad Video Edit', priority: 'high', roleHint: 'video' },
+        { title: 'Meta Pixel / Conversion API Tracking Check', priority: 'high', roleHint: 'media' },
+        { title: 'Campaign Setup, Audience Targeting & QA Launch', priority: 'high', roleHint: 'media' }
+    ];
+    standardTasks.forEach(t => addBulkTaskRow(containerId, key, t));
 }
 
 function calculateLiveKpis() {

@@ -155,6 +155,10 @@ class MeetingController extends Controller
             return response()->json($meeting->load(['client', 'attendees']), 201);
         }
 
+        if ($request->boolean('redirect_back')) {
+            return redirect()->back()->with('success', "Meeting '{$meeting->agenda}' scheduled directly from pipeline! Timeline & Admin alerts updated.");
+        }
+
         return redirect()->route('meetings.index')->with('success', "Meeting '{$meeting->agenda}' scheduled successfully!");
     }
 

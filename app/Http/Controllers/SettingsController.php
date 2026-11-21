@@ -178,4 +178,36 @@ class SettingsController extends Controller
             return redirect()->back()->with('error', 'Error changing password: ' . $e->getMessage());
         }
     }
+
+    public function resetDatabase(Request $request)
+    {
+        try {
+            /** @var User $user */
+            $user = Auth::user();
+
+            if (! $user || ! $user->isOwner()) {
+                abort(403, 'Unauthorized. Only the primary agency Owner Admin can reset database records.');
+            }
+
+            $request->validate([
+                'admin_password' => 'required',
+                'confirm_phrase' => 'required|string',
+            ]);
+
+            if (! Hash::check($request->admin_password, $user->password)) {
+                return redirect()->back()->with('error', 'Authentication failed: Incorrect owner admin password. Database reset was aborted.');
+            }
+
+            if (trim($request->confirm_phrase) !== 'RESET ALL DATA') {
+                return redirect()->back()->with('error', 'Confirmation failed: You must type exact phrase "RESET ALL DATA" to proceed. Database reset was aborted.');
+            }
+
+            $wipeCatalogs = $request->boolean('wipe_catalogs', false);
+            $result = \App\Services\DatabaseResetService::resetExceptOwnerAdmin(! $wipeCatalogs);
+
+            return redirect()->route('settings.index')->with('success', "Live database has been successfully reset! All demo records and staff accounts removed. Owner Admin [{$result['preserved_owner']['username']}] is preserved.");
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'Error resetting database: ' . $e->getMessage());
+        }
+    }
 }

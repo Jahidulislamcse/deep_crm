@@ -63,3 +63,35 @@ Artisan::command('invoices:generate-recurring {month?}', function (?string $mont
     $this->info("Recurring billing complete! Generated {$result['generated_count']} invoice(s) totaling BDT " . number_format($result['total_amount'], 2) . ".");
     return self::SUCCESS;
 })->purpose('Generate monthly retainer invoices for active clients')->monthlyOn(1, '01:00');
+
+// Clean Database Reset (Preserves Owner Admin ID 1)
+Artisan::command('db:reset-clean {--force : Bypass safety confirmation prompt} {--wipe-catalogs : Also truncate services and expense categories}', function () {
+    $force = $this->option('force');
+    $wipeCatalogs = (bool) $this->option('wipe-catalogs');
+
+    if (! $force) {
+        $confirmed = $this->confirm(
+            '⚠️  WARNING: This will permanently DELETE all clients, leads, tasks, campaigns, invoices, expenses, and employee accounts, PRESERVING only the primary Owner Admin. Do you want to proceed?',
+            false
+        );
+
+        if (! $confirmed) {
+            $this->comment('Reset operation cancelled by user.');
+            return self::SUCCESS;
+        }
+    }
+
+    $this->warn('Beginning clean database reset...');
+    $res = \App\Services\DatabaseResetService::resetExceptOwnerAdmin(! $wipeCatalogs);
+
+    $this->info("✅ Successfully truncated " . count($res['truncated_tables']) . " operational data tables.");
+    $this->info("✅ Removed {$res['deleted_users_count']} demo/staff user accounts.");
+    if ($res['preserved_owner']) {
+        $owner = $res['preserved_owner'];
+        $this->info("👑 Preserved Owner Admin: [ID: {$owner['id']}] {$owner['username']} ({$owner['name']}) <{$owner['email']}> - Role: {$owner['role']}");
+    }
+    $this->info('Database reset complete!');
+
+    return self::SUCCESS;
+})->purpose('Reset all database records while preserving the Owner Admin account');
+

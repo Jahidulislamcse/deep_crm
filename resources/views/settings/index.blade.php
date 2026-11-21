@@ -25,11 +25,6 @@
             <button @click="activeTab = 'pipeline'" :class="activeTab === 'pipeline' ? 'bg-white text-slate-900 shadow-sm font-bold' : 'text-slate-600 hover:text-slate-900 font-semibold'" class="px-3.5 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5">
                 <i class="fa fa-filter-circle-dollar text-emerald-500"></i> CRM Pipeline
             </button>
-            @if(auth()->user()->isOwner())
-            <button @click="activeTab = 'database'" :class="activeTab === 'database' ? 'bg-rose-600 text-white shadow-sm font-bold' : 'text-rose-600 hover:bg-rose-50 font-semibold'" class="px-3.5 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5">
-                <i class="fa fa-triangle-exclamation"></i> Reset Database
-            </button>
-            @endif
         </div>
     </div>
 
@@ -244,86 +239,5 @@
             @endforelse
         </div>
     </div>
-
-    <!-- TAB 4: DATABASE RESET (OWNER ONLY) -->
-    @if(auth()->user()->isOwner())
-    <div x-show="activeTab === 'database'" class="bg-white rounded-2xl border border-rose-200 shadow-sm p-6 space-y-6">
-        <div class="border-b border-rose-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-                <h3 class="text-sm font-bold text-rose-700 flex items-center gap-2">
-                    <i class="fa fa-triangle-exclamation"></i> Reset All System & Live Data
-                </h3>
-                <p class="text-xs text-slate-500 mt-0.5">Wipe all operational data (clients, leads, tasks, campaigns, invoices, demo staff) while keeping your Owner Admin account.</p>
-            </div>
-            <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-200 self-start sm:self-auto">
-                Owner Access Only
-            </span>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="p-4 rounded-xl bg-rose-50/70 border border-rose-200/80 space-y-2">
-                <h4 class="text-xs font-bold text-rose-900 flex items-center gap-1.5">
-                    <i class="fa fa-trash-can text-rose-600"></i> What Will Be Deleted
-                </h4>
-                <ul class="text-[11px] text-rose-800 space-y-1 list-disc list-inside font-medium">
-                    <li>All Clients & Client Service assignments</li>
-                    <li>All CRM Leads, requirements, notes & proposals</li>
-                    <li>All Agency Tasks, checklists & progress updates</li>
-                    <li>All Content Posts & 6-stage editorial items</li>
-                    <li>All Meta/Google Ad Campaigns & KPIs</li>
-                    <li>All Invoices, payments, reminders & expenses</li>
-                    <li>All Meetings, calendar appointments & followups</li>
-                    <li>All Daily Worklogs, attendances & employee salaries</li>
-                    <li>All demo staff accounts (Manager, Rahim, Sara, Rafi, etc.)</li>
-                </ul>
-            </div>
-
-            <div class="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200/80 space-y-2">
-                <h4 class="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
-                    <i class="fa fa-shield-check text-emerald-600"></i> What Will Be Preserved
-                </h4>
-                <ul class="text-[11px] text-emerald-800 space-y-1.5 list-disc list-inside font-medium">
-                    <li><strong>Your Owner Admin Account:</strong> ID: {{ auth()->user()->id }} ({{ auth()->user()->username }}) remains fully active with your current password and all privileges.</li>
-                    <li><strong>CRM Pipeline Stages:</strong> Standard 7 stages (New Lead, Contacted, Meeting Done, Proposal Sent, Negotiation, Won, Lost).</li>
-                    <li><strong>Task Statuses:</strong> Core stages (Backlog, In Progress, Quality Review, Done).</li>
-                    <li><strong>Base Service Catalogs & Templates:</strong> Ready for adding real clients immediately.</li>
-                </ul>
-            </div>
-        </div>
-
-        <form action="{{ route('settings.reset-database') }}" method="POST"
-              onsubmit="return confirm('⚠️ FINAL WARNING: Are you ABSOLUTELY sure you want to permanently delete all clients, leads, tasks, and demo data? This cannot be undone!')"
-              class="max-w-2xl space-y-4 pt-2">
-            @csrf
-
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Type Confirmation Phrase <span class="text-rose-600">*</span>
-                </label>
-                <p class="text-[11px] text-slate-500 mb-2">Please type <strong class="text-rose-600 font-mono">RESET ALL DATA</strong> in the box below to confirm:</p>
-                <input type="text" name="confirm_phrase" required placeholder="RESET ALL DATA"
-                       class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-rose-500">
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Your Owner Admin Password <span class="text-rose-600">*</span>
-                </label>
-                <input type="password" name="admin_password" required placeholder="Enter your current password"
-                       class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:border-rose-500">
-            </div>
-
-            <div class="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <span class="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
-                    <i class="fa fa-lock text-slate-400"></i> Requires owner password authentication
-                </span>
-                <button type="submit" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-rose-600/20 transition-all flex items-center justify-center gap-2">
-                    <i class="fa fa-triangle-exclamation"></i>
-                    <span>Permanently Reset Database</span>
-                </button>
-            </div>
-        </form>
-    </div>
-    @endif
 </div>
 @endsection
